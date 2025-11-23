@@ -19,33 +19,35 @@ if [ "$(id -u)" != "0" ]; then
 fi
 
 # --- 参数收集 ---
-read -p "绑定端口 [7000]: " bind_port
+echo "------------------------------------------------"
+read -p "请输入绑定端口 [默认: 7000]: " bind_port
 bind_port=${bind_port:-7000}
 
-read -p "HTTP虚拟主机端口 [8080]: " vhost_http_port
+read -p "请输入HTTP虚拟主机端口 [默认: 8080]: " vhost_http_port
 vhost_http_port=${vhost_http_port:-8080}
 
-read -p "HTTPS虚拟主机端口 [8443]: " vhost_https_port
+read -p "请输入HTTPS虚拟主机端口 [默认: 8443]: " vhost_https_port
 vhost_https_port=${vhost_https_port:-8443}
 
-read -p "Dashboard端口 [7500]: " dashboard_port
+read -p "请输入Dashboard端口 [默认: 7500]: " dashboard_port
 dashboard_port=${dashboard_port:-7500}
 
-read -p "Dashboard用户名 [admin]: " dashboard_user
+read -p "请输入Dashboard用户名 [默认: admin]: " dashboard_user
 dashboard_user=${dashboard_user:-admin}
 
-read -s -p "Dashboard密码 [请输入]: " dashboard_pwd
+read -s -p "请输入Dashboard密码 [必填]: " dashboard_pwd
 echo ""
 if [ -z "$dashboard_pwd" ]; then
-  echo -e "${RED}密码不能为空，退出！${PLAIN}"
+  echo -e "${RED}错误：密码不能为空，脚本退出！${PLAIN}"
   exit 1
 fi
 
-read -p "Token (客户端连接密码) [默认随机生成]: " token
+read -p "请输入Token (客户端连接密钥) [默认: 随机生成]: " token
 if [ -z "$token" ]; then
   token=$(head /dev/urandom | tr -dc A-Za-z0-9 | head -c16)
-  echo -e "自动生成 Token: ${SKYBLUE}$token${PLAIN}"
+  echo -e "已自动生成 Token: ${SKYBLUE}$token${PLAIN}"
 fi
+echo "------------------------------------------------"
 
 # 获取本机公网IP (尝试多个源)
 echo "正在获取本机公网 IP..."
