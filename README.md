@@ -7,3 +7,5 @@ curl -sSL https://github.com/eljefeZZZ/frp-/raw/refs/heads/main/install_frp_serv
 卸载命令：
 ```
 curl -sSL https://raw.githubusercontent.com/eljefeZZZ/frp-/refs/heads/main/uninstall_frp.sh | bash
+```
+代码完全由Gmini3 Pro编写，本人没有任何编程基础，仅在自己的机器上跑通了，仅供参考！！！
