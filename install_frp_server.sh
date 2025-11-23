@@ -35,7 +35,7 @@ dashboard_port=${dashboard_port:-7500}
 read -p "请输入Dashboard用户名 [默认: admin]: " dashboard_user
 dashboard_user=${dashboard_user:-admin}
 
-read -s -p "请输入Dashboard密码 [必填]: " dashboard_pwd
+read -s -p "请输入Dashboard密码 [必填，默认不显示]: " dashboard_pwd
 echo ""
 if [ -z "$dashboard_pwd" ]; then
   echo -e "${RED}错误：密码不能为空，脚本退出！${PLAIN}"
@@ -134,3 +134,4 @@ echo -e "配置文件路径: ${INSTALL_DIR}/frps.ini"
 echo -e "查看运行状态: systemctl status frps"
 echo -e "重启服务命令: systemctl restart frps"
 echo ""
+
