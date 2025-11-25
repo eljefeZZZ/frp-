@@ -12,8 +12,6 @@ SERVICE_FILE="/etc/systemd/system/frps.service"
 INSTALL_DIR="/frp"
 
 # --- 辅助函数 ---
-
-# 获取配置值
 get_config_value() {
     key=$1
     if [ -f "$CONF_FILE" ]; then
@@ -23,7 +21,6 @@ get_config_value() {
     fi
 }
 
-# 通用修改配置函数
 modify_config() {
     key=$1
     name=$2
@@ -39,31 +36,63 @@ modify_config() {
         show_menu
         return
     fi
-    
-    # 使用 sed 替换配置
     sed -i "s/^$key = .*/$key = $new_val/" $CONF_FILE
-    
     echo -e "${GREEN}$name 已修改为 $new_val，正在重启服务...${PLAIN}"
     systemctl restart frps
+    
+    # 修改配置后，尝试自动更新防火墙规则（仅针对端口修改）
+    if [[ "$key" == *"port"* ]]; then
+        open_port $new_val
+    fi
+    
     sleep 1
     echo -e "${GREEN}修改成功！${PLAIN}"
     sleep 1
     show_menu
 }
 
-# --- 核心流程函数 ---
+# 自动放行端口函数
+open_port() {
+    port=$1
+    if [ -z "$port" ]; then return; fi
+    
+    # 检查 ufw
+    if command -v ufw > /dev/null 2>&1; then
+        if ufw status | grep -q "Status: active"; then
+            ufw allow $port/tcp >/dev/null 2>&1
+            echo -e "${GREEN}防火墙(ufw) 已放行端口: $port${PLAIN}"
+        fi
+    fi
 
-# 1. 安装流程
+    # 检查 firewall-cmd (CentOS)
+    if command -v firewall-cmd > /dev/null 2>&1; then
+        if systemctl is-active --quiet firewalld; then
+            firewall-cmd --zone=public --add-port=$port/tcp --permanent >/dev/null 2>&1
+            firewall-cmd --reload >/dev/null 2>&1
+            echo -e "${GREEN}防火墙(firewalld) 已放行端口: $port${PLAIN}"
+        fi
+    fi
+    
+    # 检查 iptables (仅当没有 ufw/firewalld 时尝试，避免冲突)
+    if ! command -v ufw > /dev/null 2>&1 && ! command -v firewall-cmd > /dev/null 2>&1; then
+        if command -v iptables > /dev/null 2>&1; then
+            iptables -I INPUT -p tcp --dport $port -j ACCEPT >/dev/null 2>&1
+            # 尝试保存规则，适配不同系统
+            netfilter-persistent save >/dev/null 2>&1 || service iptables save >/dev/null 2>&1
+            echo -e "${GREEN}防火墙(iptables) 已放行端口: $port${PLAIN}"
+        fi
+    fi
+}
+
+# --- 核心流程 ---
 install_frps() {
     echo -e "${YELLOW}=== 开始安装 frp 服务端 ===${PLAIN}"
 
-    # 检查是否为 root
     if [ "$(id -u)" != "0" ]; then
         echo -e "${RED}错误：该脚本必须以 root 用户运行！${PLAIN}"
         exit 1
     fi
 
-    # 收集参数
     echo "------------------------------------------------"
     read -p "请输入绑定端口 [默认: 7000]: " bind_port
     bind_port=${bind_port:-7000}
@@ -94,7 +123,6 @@ install_frps() {
     fi
     echo "------------------------------------------------"
 
-    # 下载安装
     echo "正在获取 frp 最新版本链接..."
     DOWNLOAD_URL=$(curl -s https://api.github.com/repos/fatedier/frp/releases/latest | grep browser_download_url | grep linux_amd64.tar.gz | cut -d '"' -f 4)
 
@@ -109,7 +137,6 @@ install_frps() {
     tar -zxf /tmp/frp.tar.gz -C "$INSTALL_DIR" --strip-components=1
     rm /tmp/frp.tar.gz
 
-    # 写入配置
     echo "写入配置文件 frps.ini ..."
     cat > "$CONF_FILE" <<EOF
 [common]
@@ -122,7 +149,6 @@ dashboard_pwd = $dashboard_pwd
 token = $token
 EOF
 
-    # 创建服务
     echo "创建 systemd 服务文件..."
     cat > $SERVICE_FILE <<EOF
 [Unit]
@@ -142,11 +168,18 @@ EOF
     systemctl daemon-reload
     systemctl enable frps >/dev/null 2>&1
     systemctl restart frps
-
+    
+    # --- 自动配置防火墙 ---
+    echo "正在配置防火墙..."
+    open_port $bind_port
+    open_port $vhost_http_port
+    open_port $vhost_https_port
+    open_port $dashboard_port
+    # 额外提示：如果用户需要用其他端口，建议在这里也默认放行一些常用区间，或者提示用户
+    
     view_config
 }
 
-# 2. 卸载流程
 uninstall_frps() {
     echo ""
     read -p "确定要卸载 frps 吗？(y/n): " confirm
@@ -163,9 +196,7 @@ uninstall_frps() {
     fi
 }
 
-# 3. 查看信息
 view_config() {
-    # 获取本机 IPv4
     SERVER_IP=$(curl -s -4 http://ifconfig.me || curl -s -4 http://api.ipify.org)
     if [ -z "$SERVER_IP" ]; then SERVER_IP="无法获取"; fi
 
@@ -193,10 +224,11 @@ view_config() {
     echo -e " ---------------------------------------------"
     echo -e " 连接 Token     : ${RED}${token}${PLAIN}  (客户端填写此密钥)"
     echo -e "${GREEN}==============================================${PLAIN}"
+    echo -e "${YELLOW}注意：如果在客户端使用了自定义端口（如 6001），请务必在 VPS 上放行该端口：${PLAIN}"
+    echo -e "命令示例: ufw allow 6001/tcp"
     echo ""
 }
 
-# 4. 管理菜单
 show_menu() {
     clear
     echo -e "${YELLOW}=== frp 服务端一键管理脚本 ===${PLAIN}"
@@ -210,6 +242,7 @@ show_menu() {
     echo -e "${GREEN}7.${PLAIN} 重启 frps 服务"
     echo -e "${GREEN}8.${PLAIN} 停止 frps 服务"
     echo -e "${GREEN}9.${PLAIN} 卸载 frps"
+    echo -e "${GREEN}10.${PLAIN} 手动放行其他端口 (如 6001)"
     echo "-----------------------------"
     echo -e "${GREEN}0.${PLAIN} 退出"
     echo ""
@@ -225,16 +258,14 @@ show_menu() {
         7) systemctl restart frps && echo -e "${GREEN}服务已重启！${PLAIN}" && sleep 2 && show_menu ;;
         8) systemctl stop frps && echo -e "${RED}服务已停止！${PLAIN}" && sleep 2 && show_menu ;;
         9) uninstall_frps ;;
+        10) read -p "请输入要放行的端口号: " p && open_port $p && read -p "按回车键继续..." && show_menu ;;
         0) exit 0 ;;
         *) echo -e "${RED}无效选项！${PLAIN}" && sleep 1 && show_menu ;;
     esac
 }
 
-# --- 入口逻辑 ---
 if [ -f "$CONF_FILE" ]; then
-    # 已安装，显示菜单
     show_menu
 else
-    # 未安装，进入安装流程
     install_frps
 fi
