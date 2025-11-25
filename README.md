@@ -2,9 +2,9 @@
 代码完全由Gmini3 Pro编写，本人没有任何编程基础，上传目的是为了自己以后使用方便，仅在自己的两个机器上跑通了系统是Debian 9 x86_64  
 ，仅供新手参考！！！
 # 🚀 FRP Server Auto Installer | frp 服务端一键部署脚本
-
+---
 ![GitHub](https://img.shields.io/badge/License-MIT-green.svg) ![Shell](https://img.shields.io/badge/Language-Shell-blue.svg) ![Platform](https://img.shields.io/badge/Platform-Linux-lightgrey.svg)
-
+---
 > **全自动部署、可视化管理、智能防火墙配置。让内网穿透变得前所未有的简单。**
 
 本脚本旨在为 Linux VPS 用户提供最快捷的 `frps`（frp 服务端）部署方案。无需繁琐的手动编辑配置文件，只需一行命令，即可完成下载、安装、配置、开机自启及防火墙设置。
@@ -94,19 +94,12 @@ text
 ## ❓ 常见问题 (FAQ)
 
 **Q: 安装后客户端连不上，提示 `i/o timeout`？**  
-A: 这通常是防火墙问题。脚本会自动放行基础端口，但如果你使用了自定义端口（如 `6001`），请运行脚本选择菜单 **10. 手动放行其他端口**。另外，请检查云服务商（如 AWS/阿里云/腾讯云）的网页后台安全组是否放行了对应端口。
+A: 这通常是防火墙问题。脚本会自动放行基础端口，但如果你使用了自定义端口，请运行脚本选择菜单 **10. 手动放行其他端口**。另外，请检查云服务商（如 AWS/阿里云/腾讯云）的网页后台安全组是否放行了对应端口。
 
 **Q: 为什么脚本显示的 IP 不是我的公网 IP？**  
 A: 脚本会自动尝试获取公网 IPv4。如果你的 VPS 是纯 IPv6 环境或网络特殊，可能需要手动确认 IP。
 
 **Q: 如何卸载？**  
 A: 再次运行脚本，选择菜单 **9. 卸载 frps**，脚本会彻底清理所有文件和服务，不留残留。
-
----
-
-## 📝 开源协议
-
-本项目基于 [MIT License](LICENSE) 开源。
-
 ---
 *Created by [eljefeZZZ](https://github.com/eljefeZZZ)*
